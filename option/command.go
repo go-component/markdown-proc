@@ -10,7 +10,6 @@ import (
 
 type CommandOption func(command *types.Command) error
 
-
 var FilenameNotAllowEmpty = errors.New("filename not allow empty")
 var OutputNotAllowEmpty = errors.New("output now allow empty")
 

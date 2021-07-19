@@ -9,17 +9,17 @@ const (
 
 var supportMode map[int]struct{}
 
-func init(){
+func init() {
 	supportMode = map[int]struct{}{
 		Image: {},
-		Word: {},
+		Word:  {},
 	}
 }
 
 var NotMatchMode = errors.New("not match mode")
 
-func CheckMode(mode int)error{
-	if _,ok := supportMode[mode]; !ok{
+func CheckMode(mode int) error {
+	if _, ok := supportMode[mode]; !ok {
 		return NotMatchMode
 	}
 
