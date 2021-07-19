@@ -16,7 +16,7 @@ var OutputNotAllowEmpty = errors.New("output now allow empty")
 func WithImageModeOption() CommandOption {
 
 	return func(command *types.Command) error {
-		command.ImageDirname = strings.Trim(filepath.Base(command.Filename), ".md")
+		command.ImageDirname = strings.TrimSuffix(filepath.Base(command.Filename), ".md")
 		command.Processing = &processing.Image{
 			Command: command,
 		}
