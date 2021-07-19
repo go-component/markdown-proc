@@ -3,7 +3,6 @@ package processing
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/go-component/markdown-proc/internal/fileutil"
 	"github.com/go-component/markdown-proc/types"
@@ -20,7 +19,6 @@ type Image struct {
 	Command *types.Command
 }
 
-var ImageStatusCodeError = errors.New("status code error of image")
 
 func (i *Image) parseImageDir() string {
 
@@ -172,7 +170,7 @@ func (i *Image) crawl(eg *errgroup.Group, url string, k int) {
 		defer response.Body.Close()
 
 		if response.StatusCode != 200 {
-			return ImageStatusCodeError
+			log.Printf("status code error of image: %s, statusCode: %d, index: %d\n", url, response.StatusCode, k+1)
 		}
 
 		imagePath := i.imagePathFormat(url, k+1)
