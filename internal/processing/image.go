@@ -19,7 +19,6 @@ type Image struct {
 	Command *types.Command
 }
 
-
 func (i *Image) parseImageDir() string {
 
 	return filepath.Join(i.Command.Output, i.Command.ImageDirname)
@@ -71,7 +70,7 @@ func (i *Image) parseImageUrl() (list []string, err error) {
 		return list, err
 	}
 
-	reg := regexp.MustCompile("!\\[\\]\\((http.*)\\)")
+	reg := regexp.MustCompile("!\\[\\]\\(((https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|])\\)")
 
 	result := reg.FindAllStringSubmatch(string(b), -1)
 
@@ -98,16 +97,18 @@ func (i *Image) Process() error {
 
 	eg := new(errgroup.Group)
 
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
+
 	for k, url := range list {
-		i.crawl(eg, url, k)
+		i.crawl(eg, client, url, k)
 	}
 
 	if err = eg.Wait(); err != nil {
 		return err
-	}
-
-	for k, url := range list {
-		i.crawl(eg, url, k)
 	}
 
 	b, err := i.replaceImagePath(list)
@@ -158,11 +159,12 @@ func (i *Image) replaceImagePath(list []string) (b []byte, err error) {
 	return b, nil
 }
 
-func (i *Image) crawl(eg *errgroup.Group, url string, k int) {
+func (i *Image) crawl(eg *errgroup.Group, client *http.Client, url string, k int) {
 
 	eg.Go(func() error {
 
-		response, err := http.Get(url)
+		req, err := http.NewRequest("GET", url, nil)
+		response, err := client.Do(req)
 		if err != nil {
 			return err
 		}
@@ -170,6 +172,8 @@ func (i *Image) crawl(eg *errgroup.Group, url string, k int) {
 		defer response.Body.Close()
 
 		if response.StatusCode != 200 {
+			res, _ := io.ReadAll(response.Body)
+			fmt.Println(string(res))
 			log.Printf("status code error of image: %s, statusCode: %d, index: %d\n", url, response.StatusCode, k+1)
 		}
 
