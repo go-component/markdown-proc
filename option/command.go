@@ -2,38 +2,39 @@ package option
 
 import (
 	"errors"
+	"github.com/go-component/markdown-proc/internal/processing"
+	"github.com/go-component/markdown-proc/types"
 	"path/filepath"
+	"strings"
 )
 
-type CommandOption func(*Command) error
+type CommandOption func(command *types.Command) error
 
-type Command struct {
-	Output       string
-	ImageDirname string
-	Filename     string
-}
 
 var FilenameNotAllowEmpty = errors.New("filename not allow empty")
 var OutputNotAllowEmpty = errors.New("output now allow empty")
 
-func WithImageModeOption(imageDirname string) CommandOption {
+func WithImageModeOption() CommandOption {
 
-	return func(command *Command) error {
-		command.ImageDirname = imageDirname
-		if imageDirname == "" {
-			command.ImageDirname = filepath.Base(command.Filename)
+	return func(command *types.Command) error {
+		command.ImageDirname = strings.Trim(filepath.Base(command.Filename), ".md")
+		command.Processing = &processing.Image{
+			Command: command,
 		}
 		return nil
 	}
 }
 
 func WithWordModeOption() CommandOption {
-	return func(command *Command) error {
+	return func(command *types.Command) error {
+		command.Processing = &processing.Word{
+			Command: command,
+		}
 		return nil
 	}
 }
 
-func checkBaseOption(command *Command) error {
+func checkBaseOption(command *types.Command) error {
 	if command.Filename == "" {
 		return FilenameNotAllowEmpty
 	}
@@ -44,9 +45,9 @@ func checkBaseOption(command *Command) error {
 	return nil
 }
 
-func NewCommandOption(filename, output string, opts ...CommandOption) (*Command, error) {
+func NewCommandOption(filename, output string, opts ...CommandOption) (*types.Command, error) {
 
-	command := &Command{
+	command := &types.Command{
 		Output:       output,
 		ImageDirname: "",
 		Filename:     filename,
@@ -60,7 +61,7 @@ func NewCommandOption(filename, output string, opts ...CommandOption) (*Command,
 		}
 	}
 
-	if err := checkBaseOption(command); err != nil{
+	if err := checkBaseOption(command); err != nil {
 		return nil, err
 	}
 

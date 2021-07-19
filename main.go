@@ -2,17 +2,15 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/go-component/markdown-proc/conf"
 	"github.com/go-component/markdown-proc/option"
 	"log"
 )
 
 var (
-	mode         int
-	output       string
-	imageDirname string
-	filename     string
+	mode     int
+	output   string
+	filename string
 )
 
 const (
@@ -21,11 +19,10 @@ const (
 
 func init() {
 	flag.IntVar(&mode, "m", defaultMode, `processing mode 
-1:image 
-2:word`)
-	flag.StringVar(&output, "o", "", "output dir")
-	flag.StringVar(&imageDirname, "d", "", "dirname of image, default same as markdown name")
-	flag.StringVar(&filename, "f", "", "filename of markdown")
+1: image 
+2: word`)
+	flag.StringVar(&output, "o", "", "output path")
+	flag.StringVar(&filename, "f", "", "filepath of markdown")
 }
 
 func main() {
@@ -39,17 +36,21 @@ func main() {
 
 	switch mode {
 	case conf.Image:
-		opt = option.WithImageModeOption(imageDirname)
+		opt = option.WithImageModeOption()
 	case conf.Word:
 		opt = option.WithWordModeOption()
 	}
 
 	commandOption, err := option.NewCommandOption(filename, output, opt)
 
-	if err != nil{
+	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(commandOption)
+	err = commandOption.Processing.Process()
+
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 }
