@@ -1,2 +1,2 @@
 # markdown-proc
-A additional processing for markdown
+A additional processing for markdown.
