@@ -3,7 +3,7 @@ package option
 import (
 	"errors"
 	"github.com/go-component/markdown-proc/internal/processing"
-	"github.com/go-component/markdown-proc/types"
+	"github.com/go-component/markdown-proc/internal/types"
 	"path/filepath"
 	"strings"
 )
@@ -45,6 +45,12 @@ func checkBaseOption(command *types.Command) error {
 }
 
 func NewCommandOption(filename, output string, opts ...CommandOption) (*types.Command, error) {
+
+	output, err := filepath.Abs(output)
+	if err != nil {
+		return nil, err
+	}
+
 
 	command := &types.Command{
 		Output:       output,

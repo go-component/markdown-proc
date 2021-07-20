@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/go-component/markdown-proc/internal/baseutil"
 	"github.com/go-component/markdown-proc/internal/fileutil"
-	"github.com/go-component/markdown-proc/types"
+	"github.com/go-component/markdown-proc/internal/types"
 	"golang.org/x/sync/errgroup"
 	"io"
 	"log"
@@ -38,17 +39,14 @@ func (i *Image) tryCreateDir() error {
 	return err
 }
 
-func (i *Image) imagePathFormat(url string, index int) string {
-	ext := fileutil.Ext(url)
+func (i *Image) imagePathFormat(filename string) string {
 
-	return filepath.Join(i.parseImageDir(), fmt.Sprintf("%d%s", index, ext))
+	return filepath.Join(i.parseImageDir(), filename)
 }
 
-func (i *Image) imageRelativePathFormat(url string, index int) string {
+func (i *Image) imageRelativePathFormat(filename string) string {
 
-	ext := fileutil.Ext(url)
-
-	return filepath.Join(filepath.Base(i.parseImageDir()), fmt.Sprintf("%d%s", index, ext))
+	return filepath.Join(filepath.Base(i.parseImageDir()), filename)
 }
 
 func (i *Image) outputPathFormat() string {
@@ -56,7 +54,7 @@ func (i *Image) outputPathFormat() string {
 	return filepath.Join(i.Command.Output, filepath.Base(i.Command.Filename))
 }
 
-func (i *Image) parseImageUrl() (list []string, err error) {
+func (i *Image) parseImageUrl() (list []types.UrlAddress, err error) {
 
 	handler, err := os.Open(i.Command.Filename)
 	if err != nil {
@@ -70,12 +68,18 @@ func (i *Image) parseImageUrl() (list []string, err error) {
 		return list, err
 	}
 
-	reg := regexp.MustCompile("!\\[\\]\\(((https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|])\\)")
+	reg := regexp.MustCompile("!\\[.*\\]\\((http.*)\\)")
 
 	result := reg.FindAllStringSubmatch(string(b), -1)
 
 	for _, v := range result {
-		list = append(list, v[1])
+
+		md5Str := baseutil.Md5(v[1])
+		list = append(list,types.UrlAddress{
+			Value:       v[1],
+			Md5:         md5Str,
+			Md5Filename: fmt.Sprintf("%s%s", md5Str, fileutil.Ext(v[1])),
+		})
 	}
 
 	return list, nil
@@ -103,8 +107,8 @@ func (i *Image) Process() error {
 		},
 	}
 
-	for k, url := range list {
-		i.crawl(eg, client, url, k)
+	for _,urlAddress := range list {
+		i.crawl(eg, client, urlAddress)
 	}
 
 	if err = eg.Wait(); err != nil {
@@ -123,20 +127,30 @@ func (i *Image) Process() error {
 func (i *Image) write(content []byte) error {
 
 	outputPath := i.outputPathFormat()
+
 	handler, err := os.OpenFile(outputPath, os.O_CREATE|os.O_WRONLY, 0755)
 	if err != nil {
 		return err
 	}
 	defer handler.Close()
 
-	_, err = bufio.NewWriter(handler).Write(content)
+	bf := bufio.NewWriter(handler)
+	_, err = bf.Write(content)
 
-	log.Printf("processing success: %s", outputPath)
+	if err != nil{
+		return err
+	}
+
+	err = bf.Flush()
+
+	if err == nil{
+		log.Printf("processing success: %s", outputPath)
+	}
 
 	return err
 }
 
-func (i *Image) replaceImagePath(list []string) (b []byte, err error) {
+func (i *Image) replaceImagePath(list []types.UrlAddress) (b []byte, err error) {
 
 	handler, err := os.Open(i.Command.Filename)
 	if err != nil {
@@ -150,20 +164,19 @@ func (i *Image) replaceImagePath(list []string) (b []byte, err error) {
 		return b, err
 	}
 
-	for k, url := range list {
-		imagePath := i.imageRelativePathFormat(url, k+1)
-
-		b = bytes.Replace(b, []byte(url), []byte(imagePath), -1)
+	for _, urlAddress := range list {
+		imagePath := i.imageRelativePathFormat(urlAddress.Md5Filename)
+		b = bytes.Replace(b, []byte(urlAddress.Value), []byte(imagePath), -1)
 	}
 
 	return b, nil
 }
 
-func (i *Image) crawl(eg *errgroup.Group, client *http.Client, url string, k int) {
+func (i *Image) crawl(eg *errgroup.Group, client *http.Client, urlAddress types.UrlAddress) {
 
 	eg.Go(func() error {
 
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequest("GET", urlAddress.Value, nil)
 		response, err := client.Do(req)
 		if err != nil {
 			return err
@@ -172,12 +185,10 @@ func (i *Image) crawl(eg *errgroup.Group, client *http.Client, url string, k int
 		defer response.Body.Close()
 
 		if response.StatusCode != 200 {
-			res, _ := io.ReadAll(response.Body)
-			fmt.Println(string(res))
-			log.Printf("status code error of image: %s, statusCode: %d, index: %d\n", url, response.StatusCode, k+1)
+			log.Printf("status code error of image: %s, statusCode: %d \n", urlAddress.Value, response.StatusCode)
 		}
 
-		imagePath := i.imagePathFormat(url, k+1)
+		imagePath := i.imagePathFormat(urlAddress.Md5Filename)
 
 		imageHandler, err := os.OpenFile(imagePath, os.O_CREATE|os.O_WRONLY, 0755)
 		if err != nil {

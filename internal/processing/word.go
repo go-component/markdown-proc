@@ -1,7 +1,7 @@
 package processing
 
 import (
-	"github.com/go-component/markdown-proc/types"
+	"github.com/go-component/markdown-proc/internal/types"
 )
 
 type Word struct {
