@@ -8,5 +8,5 @@ type Command struct {
 	Output       string
 	ImageDirname string
 	Filename     string
-	Processing   Processing
+	Mode         int
 }

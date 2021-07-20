@@ -2,7 +2,7 @@ package option
 
 import (
 	"errors"
-	"github.com/go-component/markdown-proc/internal/processing"
+	"github.com/go-component/markdown-proc/internal/conf"
 	"github.com/go-component/markdown-proc/internal/types"
 	"path/filepath"
 	"strings"
@@ -17,18 +17,14 @@ func WithImageModeOption() CommandOption {
 
 	return func(command *types.Command) error {
 		command.ImageDirname = strings.TrimSuffix(filepath.Base(command.Filename), ".md")
-		command.Processing = &processing.Image{
-			Command: command,
-		}
+		command.Mode = conf.Image
 		return nil
 	}
 }
 
 func WithWordModeOption() CommandOption {
 	return func(command *types.Command) error {
-		command.Processing = &processing.Word{
-			Command: command,
-		}
+		command.Mode = conf.Word
 		return nil
 	}
 }

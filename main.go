@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
-	"github.com/go-component/markdown-proc/conf"
-	"github.com/go-component/markdown-proc/option"
+	"github.com/go-component/markdown-proc/internal"
+	"github.com/go-component/markdown-proc/internal/conf"
+	"github.com/go-component/markdown-proc/internal/option"
 	"log"
 )
 
@@ -19,8 +20,11 @@ const (
 
 func init() {
 	flag.IntVar(&mode, "m", defaultMode, `processing mode 
-1: image 
-2: word`)
+0: image 
+1: word
+
+default 0
+`)
 	flag.StringVar(&output, "o", "", "output path")
 	flag.StringVar(&filename, "f", "", "filepath of markdown")
 }
@@ -47,9 +51,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	err = commandOption.Processing.Process()
-
-	if err != nil {
+	if err = internal.Run(commandOption); err != nil {
 		log.Fatalln(err)
 	}
 

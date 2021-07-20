@@ -1,9 +1,9 @@
 package processing
 
 import (
-	"github.com/go-component/markdown-proc/internal/processing"
 	"github.com/go-component/markdown-proc/internal/types"
-	"github.com/go-component/markdown-proc/option"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -13,13 +13,19 @@ func TestImage_Process(t *testing.T) {
 		Command *types.Command
 	}
 
-	commandOption, err := option.NewCommandOption(
-		"../../resource/markdown/1.md",
-		"../../resource/markdown/output",
-		option.WithImageModeOption(),
-	)
-	if err != nil{
+	output := "../../resource/markdown/output"
+
+	output, err := filepath.Abs(output)
+	if err != nil {
 		panic(err)
+	}
+
+	filename := "../../resource/markdown/1.md"
+
+	command := &types.Command{
+		Output:       output,
+		Filename:     filename,
+		ImageDirname: strings.TrimSuffix(filepath.Base(filename), ".md"),
 	}
 
 	tests := []struct {
@@ -28,14 +34,14 @@ func TestImage_Process(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "process-test1",
-			fields: fields{Command: commandOption},
+			name:    "process-test1",
+			fields:  fields{Command: command},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &processing.Image{
+			i := &Image{
 				Command: tt.fields.Command,
 			}
 			if err := i.Process(); (err != nil) != tt.wantErr {
